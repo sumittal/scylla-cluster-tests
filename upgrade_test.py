@@ -128,12 +128,11 @@ class UpgradeTest(FillDatabaseData):
             node.remoter.run('sudo yum install %s -y' % node.scylla_pkg())
             node.remoter.run('for conf in $( rpm -qc $(rpm -qa | grep scylla) | grep -v contains ); do sudo cp -v $conf.autobackup $conf; done')
         elif self.upgrade_rollback_mode == 'minor_release':
-            node.remoter.run('sudo yum downgrade scylla\*%s -y' % self.orig_ver.split('-')[0])
-        else:
             if new_introduced_pkgs:
                 node.remoter.run('sudo yum remove %s -y' % new_introduced_pkgs)
-            node.remoter.run('sudo yum downgrade scylla\* -y')
-            if new_introduced_pkgs:
+                node.remoter.run('sudo yum downgrade scylla\*%s -y' % self.orig_ver.split('-')[0])
+            #node.remoter.run('sudo yum downgrade scylla\* -y')
+            #if new_introduced_pkgs:
                 node.remoter.run('sudo yum install %s -y' % node.scylla_pkg())
             node.remoter.run('for conf in $( rpm -qc $(rpm -qa | grep scylla) | grep -v contains ); do sudo cp -v $conf.autobackup $conf; done')
 
