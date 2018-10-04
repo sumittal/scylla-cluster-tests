@@ -51,6 +51,6 @@ base_version: !mux
         scylla_repo: https://s3.amazonaws.com/downloads.scylladb.com/rpm/centos/scylla-2.2.repo
     2017.1:
         scylla_repo: https://s3.amazonaws.com/downloads.scylladb.com/enterprise/rpm/centos/scylla-enterprise-2017.1.repo
-    2018.1.0:
-        # official release 2018.1.0
-        scylla_repo: https://s3.amazonaws.com/downloads.scylladb.com/enterprise/rpm/unstable/centos/branch-2018.1/29/scylla.repo
+    2018.1:
+        # official release 2018.1
+        scylla_repo: http://repositories.scylladb.com/scylla/repo/6f6f3d487c18e09f0b42ed952b4a426f/centos/scylladb-2018.1.repo
