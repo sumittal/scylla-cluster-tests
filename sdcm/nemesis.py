@@ -23,10 +23,11 @@ import datetime
 import string
 import threading
 
+from multiprocessing import Pool
 from avocado.utils import process
 
 from sdcm.cluster import SCYLLA_YAML_PATH
-from .utils import get_data_dir_path
+from .data_path import get_data_path
 from .log import SDCMAdapter
 from . import prometheus
 from . import mgmt
@@ -171,7 +172,7 @@ class Nemesis(object):
 
     def _destroy_data(self):
         # Send the script used to corrupt the DB
-        break_scylla = get_data_dir_path('break_scylla.sh')
+        break_scylla = get_data_path('break_scylla.sh')
         self.target_node.remoter.send_files(break_scylla,
                                             "/tmp/break_scylla.sh")
 
@@ -428,6 +429,8 @@ class Nemesis(object):
             self.metrics_srv.event_stop(disrupt_method_name)
             if exc:
                 # propagate exception to the wrapper - to have the same handling as via-class call
+                nemesis_count = len(disrupt_methods)
+                nemesis_count = len(disrupt_methods)
                 raise
 
     def repair_nodetool_repair(self, node=None):
@@ -720,6 +723,17 @@ def log_time_elapsed_and_status(method):
             return result
     return wrapper
 
+    def run_nemesis_in_parallel(self, disrupt_methods):
+        nemesis_count = len(disrupt_methods)
+        if nemesis_count < 2:
+            self.log.error('disrupt_methods list should have atleast 2 enteries')
+
+        pool = Pool(processes=nemesis_count)
+        pool.map(self._run_process, disrupt_methods) 
+
+    def _run_process(self,method):
+        return self.method()
+
 
 class NoOpMonkey(Nemesis):
 
@@ -854,6 +868,12 @@ class LimitedChaosMonkey(Nemesis):
                                                          'disrupt_restart_node'])
 
 
+class RunParallelMonkey(Nemesis):
+
+    @log_time_elapsed_and_status
+    def disrupt(self):
+        run_nemesis_in_parallel(disrupt_methods=['disrupt_major_compaction','disrupt_stop_start_scylla_server'])
+
 class AllMonkey(Nemesis):
 
     @log_time_elapsed_and_status
@@ -894,7 +914,7 @@ class UpgradeNemesis(Nemesis):
     #         node.remoter.run('sudo rpm -URvh --replacefiles /tmp/scylla/* | true')
     #         node.remoter.run('rpm -qa scylla\*')
     #     elif repo_file:
-    #         scylla_repo = get_data_dir_path(repo_file)
+    #         scylla_repo = get_data_path(repo_file)
     #         node.remoter.send_files(scylla_repo, '/tmp/scylla.repo', verbose=True)
     #         node.remoter.run('sudo cp /etc/yum.repos.d/scylla.repo ~/scylla.repo-backup')
     #         node.remoter.run('sudo cp /tmp/scylla.repo /etc/yum.repos.d/scylla.repo')

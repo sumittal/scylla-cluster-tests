@@ -1,0 +1,45 @@
+# Test duration (min). Parameter used to keep instances produced by tests that
+# are supposed to run longer than 24 hours from being killed
+test_duration: 10080
+# cassandra-stress command. You can specify everything but the -node parameter,
+# which is going to be provided by the test suite infrastructure
+stress_cmd: cassandra-stress write cl=QUORUM duration=60m -schema 'replication(factor=3)' -port jmx=6868 -mode cql3 native -rate threads=1000 -pop seq=1..10000000
+# tcpdump to try to capture nodetool API
+tcpdump: false
+# Number list of database nodes in multiple date centers. Legacy type (int): Number of database nodes
+n_db_nodes: '6'
+# If you want to use more than 1 loader node, I recommend
+# increasing the size of the DB instance (instance_type_db parameter),
+# since 't2.micro' nodes tend to struggle with a lot of load.
+n_loaders: 2
+# Nemesis class to use (possible types in sdcm.nemesis). Example: StopStartMonkey
+nemesis_class_name: 'RunParallelMonkey'
+# Nemesis sleep interval to use if None provided specifically
+nemesis_interval: 15
+# Failure/post test behavior
+# Default: Destroy AWS instances and credentials (destroy), other values are (keep)(stop)
+failure_post_behavior: keep
+# Space node threshold before starting nemesis (bytes)
+# The default value is 6GB (6x1024^3 bytes)
+# This value is supposed to reproduce
+# https://github.com/scylladb/scylla/issues/1140
+space_node_threshold: 6442450944
+# Type of IP used to connect to machine instances.
+# This depends on whether you are running your tests from a machine inside
+# your cloud provider, where it makes sense to use 'private', or outside (use 'public')
+# Default: Use public IPs to connect to instances (public)
+# Use private IPs to connect to instances (private)
+ip_ssh_connections: 'public'
+
+user_prefix: 'run_two_nemesis_parallel'
+
+backends: !mux
+    docker: !mux
+        cluster_backend: 'docker'
+        docker_image: 'scylladb/scylla'
+        user_credentials_path: '~/.ssh/scylla-test'
+
+databases: !mux
+    scylla:
+        db_type: scylla
+        instance_type_db: 'i3.2xlarge'
