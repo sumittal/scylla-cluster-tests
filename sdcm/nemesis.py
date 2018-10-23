@@ -22,6 +22,7 @@ import time
 import datetime
 import string
 import threading
+import itertools
 
 from multiprocessing import Pool
 from avocado.utils import process
@@ -657,6 +658,35 @@ class Nemesis(object):
         self.repair_nodetool_repair()
 
 
+    def run_nemesis_in_parallel(self, disrupt_methods):
+        """
+        Choose the pair of disruption method from the list and start the both disruptions in parallel
+        """
+        # Assumption: Below sleep time should be calibrate properly or
+        # come up with wait_for_disruption_completion() method to run pair
+        # of nemesis after each other
+        sleep_time = 60
+        nemesis_count = len(disrupt_methods)
+        if nemesis_count < 2:
+            self.log.error('disrupt_methods list should have atleast 2 enteries')
+
+        # choose any 2 disrupt methods randomly, so will use itertools.combination()
+        # method. so that there will be no repeat values in each combination.
+        # If you want, I can implement the combinations() method on my own, in case
+        # the use of library is not allowed
+        all_pair_nemesis = list(itertools.combinations(disrupt_methods, r=2))
+
+        # create Pool object to run the nemesis in parallel
+        pool = Pool(processes=2)
+        for selected_disrupt_methods in all_pair_nemesis:
+            self.log.debug('Starting {} disruptions to scylla nodes'.format(selected_disrupt_methods))
+            pool.map(self._run_process, selected_disrupt_methods)
+            self.log.debug('Sleep {} seconds for disruption to be finished'.format(sleep_time))
+            time.sleep(sleep_time) # could be self.wait_for_disruption_completion(selected_disrupt_methods)
+
+    def _run_process(self,method):
+        return self.method()
+
 def log_time_elapsed_and_status(method):
     """
     Log time elapsed for method to run
@@ -722,17 +752,6 @@ def log_time_elapsed_and_status(method):
                                   (num_nodes_before, num_nodes_after))
             return result
     return wrapper
-
-    def run_nemesis_in_parallel(self, disrupt_methods):
-        nemesis_count = len(disrupt_methods)
-        if nemesis_count < 2:
-            self.log.error('disrupt_methods list should have atleast 2 enteries')
-
-        pool = Pool(processes=nemesis_count)
-        pool.map(self._run_process, disrupt_methods) 
-
-    def _run_process(self,method):
-        return self.method()
 
 
 class NoOpMonkey(Nemesis):
@@ -872,7 +891,15 @@ class RunParallelMonkey(Nemesis):
 
     @log_time_elapsed_and_status
     def disrupt(self):
-        run_nemesis_in_parallel(disrupt_methods=['disrupt_major_compaction','disrupt_stop_start_scylla_server'])
+        # Assumption:  The list of below disrupts are non hazardous
+        # when run with each others, also this list should be able
+        # to be passed via test or create as a global list which will
+        # be updated when new nemesis added to Nemesis class. Below
+        # should be used as default list of disruption methods.
+        self.run_nemesis_in_parallel(disrupt_methods=['disrupt_major_compaction','disrupt_stop_start_scylla_server',
+                                                      'disrupt_modify_table', 'disrupt_nodetool_refresh',
+                                                      'disrupt_nodetool_decommission', 'disrupt_no_corrupt_repair']
+                                    )
 
 class AllMonkey(Nemesis):
 
